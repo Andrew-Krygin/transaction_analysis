@@ -1,17 +1,17 @@
-from src.settings_logger import setup_logger
+import json
+import os
+from datetime import datetime
 
 import pandas as pd
 import requests
-
-from src.utils import PATH, load_operations, get_user_settings, get_month_range
 from dotenv import load_dotenv
-import os
-import json
-from datetime import datetime
+
+from src.settings_logger import setup_logger
+from src.utils import PATH, get_month_range, get_user_settings, load_operations
 
 PERCENT_CASHBACK = 0.01
 
-logger = setup_logger(__name__,"DEBUG", "views.log")
+logger = setup_logger(__name__, "DEBUG", "views.log")
 
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
@@ -30,20 +30,21 @@ def get_greeting(date: str) -> str:
     """
     logger.info("Convert a date from type 'str' to a datetime object.")
     try:
-        date = datetime.strptime(date, "%d.%m.%Y %H:%M:%S")
+        dt_date = datetime.strptime(date, "%d.%m.%Y %H:%M:%S")
     except (TypeError, ValueError):
-        logger.exception(f"Error converting date: %s", date)
+        logger.exception("Error converting date: %s", date)
+        raise
 
-    if 6 <= date.hour < 12:
+    if 6 <= dt_date.hour < 12:
         greeting = "Доброе утро"
-    elif 12 <= date.hour < 18:
+    elif 12 <= dt_date.hour < 18:
         greeting = "Добрый день"
-    elif 18 <= date.hour < 24:
+    elif 18 <= dt_date.hour < 24:
         greeting = "Добрый вечер"
     else:
         greeting = "Доброй ночи"
     logger.info("Returns the user's greeting depending on the time of day.")
-    return  greeting
+    return greeting
 
 
 def get_cards_expenses_and_cashback(transactions: pd.DataFrame) -> list[dict]:
@@ -54,16 +55,16 @@ def get_cards_expenses_and_cashback(transactions: pd.DataFrame) -> list[dict]:
     :return: Список словарей с необходимыми данными.
     """
     logger.info("Starting calculation of expenses and cashback by card.")
-    expenses = transactions[transactions['Сумма платежа'] < 0]
+    expenses = transactions[transactions["Сумма платежа"] < 0]
     logger.debug("Filtered expenses count: %d", len(expenses))
 
-    grouped = expenses.groupby("Номер карты")['Сумма платежа'].sum().abs().round(2).reset_index()
+    grouped = expenses.groupby("Номер карты")["Сумма платежа"].sum().abs().round(2).reset_index()
     grouped.rename(columns={"Сумма платежа": "total_spent"}, inplace=True)
 
     grouped["last_digits"] = grouped["Номер карты"].str.replace("*", "", regex=False)
     grouped["cashback"] = (grouped["total_spent"] * PERCENT_CASHBACK).round(2)
 
-    result = grouped.loc[:, ["last_digits", "total_spent", "cashback"]]
+    result = grouped[["last_digits", "total_spent", "cashback"]]
     logger.info("Calculated expenses and cashback for %d cards.", len(result))
     return result.to_dict(orient="records")
 
@@ -75,18 +76,21 @@ def get_top_transactions(transactions: pd.DataFrame) -> list[dict]:
     :return: Список топ-5 транзакций по сумме платежа.
     """
     logger.info("Start processing top 5 transactions.")
-    expenses = transactions[transactions['Сумма платежа'] < 0].copy()
+    expenses = transactions[transactions["Сумма платежа"] < 0].copy()
     logger.debug("Filtered expenses count: %d", len(expenses))
 
-    top_5 = expenses.sort_values(by='Сумма платежа', key=lambda x: x.abs(), ascending=False).head(5)
+    top_5 = expenses.sort_values(by="Сумма платежа", key=lambda x: x.abs(), ascending=False).head(5)
 
     top_5 = top_5[["Дата операции", "Сумма платежа", "Категория", "Описание"]].copy()
-    top_5.rename(columns={
-        "Дата операции": "date",
-        "Сумма платежа": "amount",
-        "Категория": "category",
-        "Описание": "description"
-    }, inplace=True)
+    top_5.rename(
+        columns={
+            "Дата операции": "date",
+            "Сумма платежа": "amount",
+            "Категория": "category",
+            "Описание": "description",
+        },
+        inplace=True,
+    )
 
     top_5["date"] = top_5["date"].dt.strftime("%d.%m.%Y")
     top_5["amount"] = top_5["amount"].abs().round(2)
@@ -102,7 +106,7 @@ def get_currency_rates(currencies: list) -> list[dict]:
     """
     base_currency = "RUB"
 
-    url =  "https://api.apilayer.com/exchangerates_data/latest"
+    url = "https://api.apilayer.com/exchangerates_data/latest"
     headers = {"apikey": API_KEY}
     params = {"symbols": ",".join(currencies), "base": base_currency}
 
@@ -139,7 +143,7 @@ def get_stock_prices(stocks: list) -> list[dict]:
     :return: Список со стоимостью акций.
     """
     url = "https://api.stockdata.org/v1/data/quote"
-    stocks =  [stocks[:2], stocks[2:]]
+    stocks = [stocks[:2], stocks[2:]]
     result = []
 
     logger.info("Requesting stock prices for: %s", stocks)
@@ -196,7 +200,7 @@ def home_page(date: str) -> str:
     :return: JSON-строка с объединёнными данными по приветствию, картам, топ 5 транзакциям, валютам и акциям.
     """
 
-    logger.info(f"Function execution started with date: %s", date)
+    logger.info("Function execution started with date: %s", date)
     try:
         greeting = get_greeting(date)
         logger.debug("The greeting has been formed.")
@@ -207,13 +211,16 @@ def home_page(date: str) -> str:
         df_transactions = load_operations(PATH)
         logger.info("Transactions successfully loaded. Total rows, columns: %s", df_transactions.shape)
 
-        df_transact_period = df_transactions.loc[(df_transactions["Дата операции"] >= start_date) &
-                                             (df_transactions["Дата операции"] <= end_date)]
+        df_transact_period = df_transactions.loc[
+            (df_transactions["Дата операции"] >= start_date) & (df_transactions["Дата операции"] <= end_date)
+        ]
         logger.debug("Transactions filtered for period. Rows after filter: %d", len(df_transact_period))
 
         cards = get_cards_expenses_and_cashback(df_transact_period)
-        logger.debug("Transactions are grouped by the Card Number category and the total amount spent across "
-                     "these categories is calculated.")
+        logger.debug(
+            "Transactions are grouped by the Card Number category and the total amount spent across "
+            "these categories is calculated."
+        )
 
         top_transactions = get_top_transactions(df_transact_period)
         logger.debug("Top 5 transactions selected.")
