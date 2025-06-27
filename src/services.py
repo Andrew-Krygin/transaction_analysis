@@ -6,6 +6,7 @@ from typing import DefaultDict
 
 import pandas as pd
 
+from src.config import PATH
 from src.settings_logger import setup_logger
 
 logger = setup_logger(__name__, "DEBUG", "services.log")
@@ -35,7 +36,7 @@ def read_transactions(path_to_file: str) -> list[dict]:
         raise
 
 
-def get_cat_upper_cashback(list_transactions: list[dict], month: int, year: int) -> str:
+def cat_upper_cashback(list_transactions: list[dict], month: int, year: int) -> str:
     """
     Функция анализирует, какие категории были наиболее выгодными для выбора в качестве категорий повышенного кешбэка.
     :param list_transactions: Список транзакций.
@@ -43,7 +44,7 @@ def get_cat_upper_cashback(list_transactions: list[dict], month: int, year: int)
     :param year: Год в котором нужно провести анализ.
     :return: Json с анализом, сколько на каждой категории можно заработать кешбэка.
     """
-    logger.info("The function get_cat_upper_cashback started. Month: %d, Year: %d", month, year)
+    logger.info("The function cat_upper_cashback started. Month: %d, Year: %d", month, year)
     if not isinstance(list_transactions, list):
         logger.error("Error! | Type: %s", type(list_transactions).__name__)
         raise TypeError(f"The transactions must be a list, got {type(list_transactions)}")
@@ -89,3 +90,16 @@ def get_cat_upper_cashback(list_transactions: list[dict], month: int, year: int)
     except Exception:
         logger.exception("Unexpected error during get_cat_upper_cashback execution.")
         raise
+
+
+def get_upper_cashback() -> str:
+    """
+    Функция возвращает выгодные категории кэшбэка за указанный месяц.
+    :return: Список категорий повышенного кэшбэка.
+    """
+    month = int(input("Введите месяц для поиска: "))
+    year = int(input("Введите год для поиска: "))
+    lst_transactions = read_transactions(PATH)
+
+    upper_cashback = cat_upper_cashback(lst_transactions, month, year)
+    return upper_cashback
