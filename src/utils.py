@@ -1,15 +1,38 @@
 import json
-import os
 from datetime import datetime
 
 import pandas as pd
 
+from src.config import BASE_DIR
 from src.settings_logger import setup_logger
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-PATH = os.path.join(BASE_DIR, "data", "operations.xlsx")
-
 logger = setup_logger(__name__, "DEBUG", "views.log")
+
+
+# Функция выводит меню программы на экран.
+def show_menu() -> None:
+    """
+    Функция выводит пункты меню на экран.
+    :return: None.
+    """
+    print(
+        """
+                        Меню программы
+-----------------------------------------------------------------
+Главная:
+1. Информация по картам
+2. Топ-5 самых крупных трат
+3. Курсы валют
+4. Цены на акции
+
+Сервисы:
+1.Выгодные категории для повышенного кешбэка (за выбранный месяц)
+
+Отчеты:
+1.Расходы по категории за последние 3 месяца
+-----------------------------------------------------------------
+"""
+    )
 
 
 # Функция загружает данные из файла operations.xlsx
@@ -20,21 +43,18 @@ def load_operations(file_path: str) -> pd.DataFrame:
     :return: Dataframe с транзакциями.
     """
     logger.info("The function load_operations started. File path: %s", file_path)
-    try:
-        logger.debug("Loading Dataframe.")
-        df = pd.read_excel(file_path)
 
-        logger.debug("Handling empty or nan values in Dataframe.")
-        df = df.fillna("")
+    logger.debug("Loading Dataframe.")
+    df = pd.read_excel(file_path)
 
-        logger.debug("Converting 'Дата операции' column to datetime objects.")
-        df["Дата операции"] = pd.to_datetime(df["Дата операции"], dayfirst=True)
+    logger.debug("Handling empty or nan values in Dataframe.")
+    df = df.fillna("")
 
-        logger.info("The function completed successfully! Return DateFrame shape (rows, columns): %s", df.shape)
-        return df
-    except Exception:
-        logger.error("Unexpected error during load_operations execution")
-        raise
+    logger.debug("Converting 'Дата операции' column to datetime objects.")
+    df["Дата операции"] = pd.to_datetime(df["Дата операции"], dayfirst=True)
+
+    logger.info("The function completed successfully! Return DateFrame shape (rows, columns): %s", df.shape)
+    return df
 
 
 # Функция возвращает диапазон от начала месяца до указанной даты.
