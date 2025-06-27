@@ -5,10 +5,8 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 from src.decorators import log
-from src.utils import PATH
 
 logger = logging.getLogger(__name__)
-df_transactions = pd.read_excel(PATH)
 
 
 @log("spending_by_category.log")
