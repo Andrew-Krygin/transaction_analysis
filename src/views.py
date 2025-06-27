@@ -6,8 +6,9 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
+from src.config import PATH
 from src.settings_logger import setup_logger
-from src.utils import PATH, get_month_range, get_user_settings, load_operations
+from src.utils import get_month_range, get_user_settings, load_operations
 
 PERCENT_CASHBACK = 0.01
 
@@ -169,95 +170,63 @@ def get_stock_prices(stocks: list) -> list[dict]:
     return result
 
 
-def home_page(date: str) -> str:
+def get_user_dashboard(date: str) -> str:
     """
-    Основная функция для формирования домашней страницы пользователя в формате JSON.
+    Формирует домашнюю страницу пользователя в формате JSON.
 
-    Принимает строку с датой и временем (в формате 'YYYY-MM-DD HH:MM:SS'),
-    и возвращает JSON-ответ, содержащий следующую информацию:
-
-    1. Персонализированное приветствие в зависимости от времени суток:
-       - "Доброе утро" (с 06:00 до 11:59)
-       - "Добрый день" (с 12:00 до 17:59)
-       - "Добрый вечер" (с 18:00 до 23:59)
-       - "Доброй ночи" (с 00:00 до 05:59)
-
-    2. Информация по каждой карте:
-       - последние 4 цифры номера карты;
-       - общая сумма расходов;
-       - рассчитанный кешбэк (1 рубль за каждые 100 рублей расходов).
-
-    3. Топ-5 транзакций с наибольшими расходами:
-       - дата;
-       - сумма;
-       - категория;
-       - описание.
-
-    4. Курсы валют, выбранные пользователем, относительно рубля.
-
-    5. Стоимость акций из списка предпочтений пользователя (из индекса S&P500).
-    :param date: Строка с датой и временем в формате 'YYYY-MM-DD HH:MM:SS'.
+    Принимает дату (строка 'DD.MM.YYYY HH:MM:SS') и возвращает JSON с:
+    - приветствием по времени суток
+    - инфо по картам (последние 4 цифры, расходы, кешбэк)
+    - топ-5 трат
+    - курсы валют пользователя
+    - цены акций пользователя
+    :param date: Строка с датой и временем в формате 'DD.MM.YYYY HH:MM:SS'.
     :return: JSON-строка с объединёнными данными по приветствию, картам, топ 5 транзакциям, валютам и акциям.
     """
 
     logger.info("Function execution started with date: %s", date)
-    try:
-        greeting = get_greeting(date)
-        logger.debug("The greeting has been formed.")
+    greeting = get_greeting(date)
+    logger.debug("The greeting has been formed.")
 
-        start_date, end_date = get_month_range(date)
-        logger.debug("Date range for filtering: %s - %s", start_date, end_date)
+    start_date, end_date = get_month_range(date)
+    logger.debug("Date range for filtering: %s - %s", start_date, end_date)
 
-        df_transactions = load_operations(PATH)
-        logger.info("Transactions successfully loaded. Total rows, columns: %s", df_transactions.shape)
+    df_transactions = load_operations(PATH)
+    logger.info("Transactions successfully loaded. Total rows, columns: %s", df_transactions.shape)
 
-        df_transact_period = df_transactions.loc[
-            (df_transactions["Дата операции"] >= start_date) & (df_transactions["Дата операции"] <= end_date)
-        ]
-        logger.debug("Transactions filtered for period. Rows after filter: %d", len(df_transact_period))
+    df_transact_period = df_transactions.loc[
+        (df_transactions["Дата операции"] >= start_date) & (df_transactions["Дата операции"] <= end_date)
+    ]
+    logger.debug("Transactions filtered for period. Rows after filter: %d", len(df_transact_period))
 
-        cards = get_cards_expenses_and_cashback(df_transact_period)
-        logger.debug(
-            "Transactions are grouped by the Card Number category and the total amount spent across "
-            "these categories is calculated."
-        )
+    cards = get_cards_expenses_and_cashback(df_transact_period)
+    logger.debug(
+        "Transactions are grouped by the Card Number category and the total amount spent across "
+        "these categories is calculated."
+    )
 
-        top_transactions = get_top_transactions(df_transact_period)
-        logger.debug("Top 5 transactions selected.")
+    top_transactions = get_top_transactions(df_transact_period)
+    logger.debug("Top 5 transactions selected.")
 
-        user_currencies, user_stocks = get_user_settings()
-        logger.info("User settings loaded. Currencies: %s, Stocks: %s", user_currencies, user_stocks)
+    user_currencies, user_stocks = get_user_settings()
+    logger.info("User settings loaded. Currencies: %s, Stocks: %s", user_currencies, user_stocks)
 
-        currency_rates = get_currency_rates(user_currencies)
-        logger.debug("Currency rates fetched: %s", currency_rates)
+    currency_rates = get_currency_rates(user_currencies)
+    logger.debug("Currency rates fetched: %s", currency_rates)
 
-        stock_prices = get_stock_prices(user_stocks)
-        logger.debug("Stock prices fetched: %s", stock_prices)
+    stock_prices = get_stock_prices(user_stocks)
+    logger.debug("Stock prices fetched: %s", stock_prices)
 
-        for stock in stock_prices:
-            stock["price"] = round(stock["price"] * currency_rates[0]["rate"], 2)
+    for stock in stock_prices:
+        stock["price"] = round(stock["price"] * currency_rates[0]["rate"], 2)
 
-        final_result = {
-            "greeting": greeting,
-            "cards": cards,
-            "top_transactions": top_transactions,
-            "currency_rates": currency_rates,
-            "stock_prices": stock_prices,
-        }
+    final_result = {
+        "greeting": greeting,
+        "cards": cards,
+        "top_transactions": top_transactions,
+        "currency_rates": currency_rates,
+        "stock_prices": stock_prices,
+    }
 
-        logger.info("All data assembled successfully.")
-        return json.dumps(final_result, indent=4, ensure_ascii=False)
-    except FileNotFoundError:
-        logger.error("Error: Not such file.")
-        error_message = {"Error": "Not such file."}
-    except requests.exceptions.RequestException as req_err:
-        logger.error("[HTTP Error]: %s", req_err)
-        error_message = {"Error": f"[HTTP Error]: {req_err}"}
-    except json.JSONDecodeError as json_err:
-        logger.error("JSON Decode Error: %s", json_err)
-        error_message = {"Error": f"JSON Decode Error: {json_err}"}
-    except Exception as e:
-        logger.exception("Unexpected error during home_page execution.")
-        error_message = {"Error": f"Unexpected error: {e}"}
-
-    return json.dumps(error_message, indent=4, ensure_ascii=False)
+    logger.info("All data assembled successfully.")
+    return json.dumps(final_result, indent=4, ensure_ascii=False)
