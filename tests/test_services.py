@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.services import get_cat_upper_cashback, read_transactions
+from src.services import cat_upper_cashback, read_transactions
 from tests.tests_data.data_for_services import LIST_TRANSACTION
 
 
@@ -35,13 +35,13 @@ class TestServices:
 
     def test_get_cat_upper_cashback(self) -> None:
         with patch("json.dumps", return_value=[{1: "hellow"}, {2: "world!"}]):
-            result = get_cat_upper_cashback(LIST_TRANSACTION, 10, 2024)
+            result = cat_upper_cashback(LIST_TRANSACTION, 10, 2024)
             assert result == [{1: "hellow"}, {2: "world!"}]
 
     def test_get_cat_upper_cashback_exceptions(self) -> None:
         with pytest.raises(TypeError):
-            get_cat_upper_cashback(LIST_TRANSACTION, "10", 2024)  # type: ignore
+            cat_upper_cashback(LIST_TRANSACTION, "10", 2024)  # type: ignore
 
         with patch("json.dumps", side_effect=Exception):
             with pytest.raises(Exception):
-                get_cat_upper_cashback(LIST_TRANSACTION, 10, 2024)
+                cat_upper_cashback(LIST_TRANSACTION, 10, 2024)
