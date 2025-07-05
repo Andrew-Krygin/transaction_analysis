@@ -27,7 +27,8 @@ def read_transactions(path_to_file: str) -> list[dict]:
         df_transactions = pd.read_excel(path_to_file)
 
         logger.info("Reading was successful! Return: %d", len(df_transactions))
-        return df_transactions.to_dict(orient="records")
+        list_transact: list[dict] = df_transactions.to_dict(orient="records")
+        return list_transact
     except FileNotFoundError:
         logger.error("File not found: %s", path_to_file)
         raise
@@ -73,7 +74,7 @@ def cat_upper_cashback(list_transactions: list[dict], month: int, year: int) -> 
         if isinstance(cashback, float) and math.isnan(cashback):
             cashback = 0.0
 
-        if pd.notna(cat) and isinstance(cashback, (int, float)):
+        if isinstance(cat, str) and isinstance(cashback, (int, float)):
             if date.month == month and date.year == year:
                 upper_cashback[cat] += int(cashback)
 
