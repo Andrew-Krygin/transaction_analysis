@@ -1,8 +1,20 @@
+from typing import Any, Callable
+
 from src.reports import spending_by_category
 from src.services import get_upper_cashback
+from src.views import get_cards_expenses_and_cashback, get_currency_rates, get_stock_prices, get_top_transactions
 
-CHOICE_MENU = {
-    "Главная": {1: "cards", 2: "top_transactions", 3: "currency_rates", 4: "stock_prices"},
+SECTION_MAIN = "Главная"
+SECTION_SERVICES = "Сервисы"
+
+
+CHOICE_MENU: dict[str, dict[int, Callable[..., Any]]] = {
+    "Главная": {
+        1: lambda df_transact_period: get_cards_expenses_and_cashback(df_transact_period),
+        2: lambda df_transact_period: get_top_transactions(df_transact_period),
+        3: lambda user_currencies: get_currency_rates(user_currencies),
+        4: lambda user_stocks: get_stock_prices(user_stocks),
+    },
     "Сервисы": {
         1: lambda: get_upper_cashback(),
     },
