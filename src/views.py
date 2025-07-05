@@ -65,9 +65,10 @@ def get_cards_expenses_and_cashback(transactions: pd.DataFrame) -> list[dict]:
     grouped["last_digits"] = grouped["Номер карты"].str.replace("*", "", regex=False)
     grouped["cashback"] = (grouped["total_spent"] * PERCENT_CASHBACK).round(2)
 
-    result = grouped[["last_digits", "total_spent", "cashback"]]
-    logger.info("Calculated expenses and cashback for %d cards.", len(result))
-    return result.to_dict(orient="records")
+    search_data = grouped[["last_digits", "total_spent", "cashback"]]
+    logger.info("Calculated expenses and cashback for %d cards.", len(search_data))
+    result: list[dict] = search_data.to_dict(orient="records")
+    return result
 
 
 def get_top_transactions(transactions: pd.DataFrame) -> list[dict]:
@@ -97,7 +98,8 @@ def get_top_transactions(transactions: pd.DataFrame) -> list[dict]:
     top_5["amount"] = top_5["amount"].abs().round(2)
 
     logger.info("Completed formatting top transactions.")
-    return top_5.to_dict(orient="records")
+    result: list[dict] = top_5.to_dict(orient="records")
+    return result
 
 
 def get_currency_rates(currencies: list) -> list[dict]:
