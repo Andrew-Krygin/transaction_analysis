@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        stages: [pre-commit]
+        args: ["--config=pyproject.toml"]
+
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.10.1
+    hooks:
+      - id: isort
+        stages: [pre-commit]
+        args: ["--settings-path=pyproject.toml"]
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        stages: [pre-commit]
+        exclude: ^htmlcov/
+        args: ["--config=.flake8"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.1
+    hooks:
+      - id: mypy
+        args: ["--config-file=mypy.ini"]
+
+        additional_dependencies:
+          - pandas-stubs
+          - types-requests
+          - types-python-dateutil
+        stages: [pre-commit]
+        exclude: ^htmlcov/
