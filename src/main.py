@@ -3,11 +3,11 @@ import json
 import requests
 
 from src.choice_category_utils import get_choice_category_in_section
-from src.choice_section_utils import get_choice_section
-from src.constants import CHOICE_MENU
+from src.choice_section_utils import call_choice_main, get_choice_section
+from src.constants import CHOICE_MENU, SECTION_MAIN, SECTION_SERVICES
 from src.section_reports_utils import get_data_reports
 from src.utils import show_menu
-from src.views import get_greeting, get_user_dashboard
+from src.views import get_greeting
 
 
 def main() -> None:
@@ -20,21 +20,21 @@ def main() -> None:
         date = "23.06.2019 23:32:12"
         show_menu()
 
-        section = get_choice_section()
-        section_category = get_choice_category_in_section(section)
+        section: str = get_choice_section()
+        section_category: int = get_choice_category_in_section(section)
 
-        choice = CHOICE_MENU[section][section_category]
-        if section == "Главная":
-            dashboard_data = json.loads(get_user_dashboard(date))
-            greeting = dashboard_data.get("greeting")
-            result = dashboard_data.get(choice)
-        elif section == "Сервисы":
-            greeting = get_greeting(date)
+        greeting: str = get_greeting(date)
+
+        if section == SECTION_MAIN:
+            result = call_choice_main(section, section_category, date)
+        elif section == SECTION_SERVICES:
+            choice = CHOICE_MENU[section][section_category]
             result = choice()
         else:
             df_transact, user_choice, date_spending_by_category = get_data_reports()
-            greeting = get_greeting(date)
+            choice = CHOICE_MENU[section][section_category]
             result = choice(df_transact, user_choice, date_spending_by_category)
+
         print()
         print(f"{greeting} Пользователь!\nОтвет: ", result, sep="\n")
     except TypeError as e:
@@ -45,6 +45,8 @@ def main() -> None:
         print(f"[JSON Decode Error]: {json_err}")
     except ValueError as e:
         print(f"Ошибка: {e}")
+    except KeyError as e:
+        print(f"Неизвестный раздел или категория: {e}")
     except Exception as e:
         print(f"Неожиданная ошибка: {e}")
 
