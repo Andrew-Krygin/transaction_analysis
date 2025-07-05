@@ -34,6 +34,12 @@ types-requests = "^2.32.4.20250611"
 types-python-dateutil = "^2.9.0.20250516"
 pre-commit = "^4.2.0"
 
+[tool.coverage.run]
+omit = [
+    "src/main.py",
+    "src/constants.py"
+]
+
 [tool.black]
 line-length = 119
 exclude = '''
