@@ -26,10 +26,11 @@ repos:
     hooks:
       - id: mypy
         args: ["--config-file=mypy.ini"]
-
         additional_dependencies:
           - pandas-stubs
           - types-requests
           - types-python-dateutil
+          - pytest-mypy-plugins
+          - pytest
         stages: [pre-commit]
-        exclude: ^htmlcov/
+        exclude: ^htmlcov/|tests/conftest.py  # Явно исключаем conftest.py
